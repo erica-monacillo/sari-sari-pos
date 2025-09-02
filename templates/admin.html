@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Admin Dashboard</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-4">
+    <h1 class="mb-4">Admin Dashboard</h1>
+    <a href="/logout" class="btn btn-danger mb-3">Logout</a>
+
+    <!-- Process Order Button -->
+    <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#processOrderModal">Process Order</button>
+
+    <!-- Process Order Modal -->
+    <div class="modal fade" id="processOrderModal" tabindex="-1">
+      <div class="modal-dialog">
+        <form id="processOrderForm" class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Process Order</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-2">
+              <label>User</label>
+              <select name="user_id" class="form-control" required>
+                {% for user in users %}
+                  <option value="{{ user.user_id }}">{{ user.username }} ({{ user.role }})</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="mb-2">
+              <label>Payment Method</label>
+              <select name="payment_method" class="form-control" required>
+                <option value="cash">Cash</option>
+                <option value="gcash">GCash</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div id="orderItems">
+              <label>Order Items</label>
+              <div class="order-item mb-2">
+                <select class="form-control mb-1 product-select" required>
+                  <option value="">Select Product</option>
+                  {% for product in products %}
+                  <option value="{{ product.product_id }}" data-price="{{ product.price }}">{{ product.product_name }} (Stock: {{ product.stock_quantity }})</option>
+                  {% endfor %}
+                </select>
+                <input type="number" class="form-control mb-1 quantity-input" placeholder="Quantity" min="1" value="1" required>
+                <input type="number" class="form-control mb-1 price-input" placeholder="Price" step="0.01" min="0" required>
+                <button type="button" class="btn btn-danger btn-sm remove-item">Remove</button>
+              </div>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm mb-2" id="addOrderItem">Add Item</button>
+            <div class="mb-2">
+              <label>Total Amount</label>
+              <input type="number" name="total_amount" id="orderTotalAmount" class="form-control" step="0.01" min="0" required readonly>
+            </div>
+            <div id="orderError" class="text-danger"></div>
+            <div id="orderSuccess" class="text-success"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-success">Submit Order</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="card text-white bg-primary mb-3">
+                <div class="card-body text-center">
+                    <h6>Total Users</h6>
+                    <h4>{{ users|length }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-body text-center">
+                    <h6>Total Products</h6>
+                    <h4>{{ products|length }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-white bg-warning mb-3">
+                <div class="card-body text-center">
+                    <h6>Total Transactions</h6>
+                    <h4>{{ transactions|length }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-white bg-danger mb-3">
+                <div class="card-body text-center">
+                    <h6>Low Stock</h6>
+                    <h4>{{ low_stock|length }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-white bg-info mb-3">
+                <div class="card-body text-center">
+                    <h6>Daily Sales</h6>
+                    <h4>{{ daily_sales }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-white bg-secondary mb-3">
+                <div class="card-body text-center">
+                    <h6>Monthly Sales</h6>
+                    <h4>{{ monthly_sales }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top-Selling Products Table -->
+    <h4 class="mb-3">Top-Selling Products</h4>
+    <table class="table table-striped table-bordered mb-4">
+        <thead>
+        <tr>
+            <th>Product Name</th>
+            <th>Total Sold</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for product, total in top_products %}
+        <tr>
+            <td>{{ product }}</td>
+            <td>{{ total }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs" id="dashboardTabs" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" id="users-tab" data-bs-toggle="tab" data-bs-target="#users">Users</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="products-tab" data-bs-toggle="tab" data-bs-target="#products">Products</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="transactions-tab" data-bs-toggle="tab" data-bs-target="#transactions">Transactions</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="inventory-tab" data-bs-toggle="tab" data-bs-target="#inventory">Inventory Logs</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="categories-tab" data-bs-toggle="tab" data-bs-target="#categories">Categories</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="details-tab" data-bs-toggle="tab" data-bs-target="#transaction-details">Transaction Details</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="payments-tab" data-bs-toggle="tab" data-bs-target="#payments">Payments</button>
+        </li>
+    </ul>
+
+    <!-- Tab content -->
+    <div class="tab-content mt-3">
+
+        <!-- Users Table -->
+        <div class="tab-pane fade show active" id="users">
+            <button class="btn btn-primary mb-2" data-bs-toggle="modal" data-bs-target="#addUserModal">Add User</button>
+            <table class="table table-striped table-bordered">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Username</th>
+                    <th>Role</th>
+                    <th>Created At</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.user_id }}</td>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.role }}</td>
+                    <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editUserModal" data-userid="{{ user.user_id }}">Edit</button>
+                        <button class="btn btn-sm btn-danger" data-userid="{{ user.user_id }}">Delete</button>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Products Table -->
+        <div class="tab-pane fade" id="products">
+            <button class="btn btn-primary mb-2" data-bs-toggle="modal" data-bs-target="#addProductModal">Add Product</button>
+            <table class="table table-striped table-bordered">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Price</th>
+                    <th>Stock Quantity</th>
+                    <th>Unit</th>
+                    <th>Created At</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for product in products %}
+                <tr>
+                    <td>{{ product.product_id }}</td>
+                    <td>{{ product.product_name }}</td>
+                    <td>{{ product.category.category_name if product.category else 'N/A' }}</td>
+                    <td>{{ product.price }}</td>
+                    <td>{{ product.stock_quantity }}</td>
+                    <td>{{ product.unit }}</td>
+                    <td>{{ product.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editProductModal" data-productid="{{ product.product_id }}">Edit</button>
+                        <button class="btn btn-sm btn-danger" data-productid="{{ product.product_id }}">Delete</button>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Transactions Table -->
+        <div class="tab-pane fade" id="transactions">
+            <table class="table table-striped table-bordered">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>User</th>
+                    <th>Payment Method</th>
+                    <th>Total Amount</th>
+                    <th>Date</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for txn in transactions %}
+                <tr>
+                    <td>{{ txn.transaction_id }}</td>
+                    <td>{{ txn.user.username if txn.user else 'N/A' }}</td>
+                    <td>{{ txn.payment_method }}</td>
+                    <td>{{ txn.total_amount }}</td>
+                    <td>{{ txn.date_time.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Inventory Logs Table -->
+        <div class="tab-pane fade" id="inventory">
+            <div class="alert alert-info mb-2">
+                Note: Inventory logs only show stock changes (Stock In/Out/Adjustment). Product creation will appear here only if an initial stock is set and logged.
+            </div>
+            <table class="table table-striped table-bordered">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Product</th>
+                    <th>Change Type</th>
+                    <th>Quantity Change</th>
+                    <th>Remarks</th>
+                    <th>Date</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for log in inventory_logs %}
+                <tr>
+                    <td>{{ log.log_id }}</td>
+                    <td>{{ log.product.product_name if log.product else 'N/A' }}</td>
+                    <td>{{ log.change_type }}</td>
+                    <td>{{ log.quantity_change }}</td>
+                    <td>{{ log.remarks }}</td>
+                    <td>{{ log.date_time.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editInventoryLogModal"
+                            data-logid="{{ log.log_id }}"
+                            data-productid="{{ log.product_id }}"
+                            data-changetype="{{ log.change_type }}"
+                            data-quantitychange="{{ log.quantity_change }}"
+                            data-remarks="{{ log.remarks }}">Edit</button>
+                        <form method="post" action="/admin/inventory/delete/{{ log.log_id }}" style="display:inline;">
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this log?')">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Categories Table -->
+        <div class="tab-pane fade" id="categories">
+            <button class="btn btn-primary mb-2" data-bs-toggle="modal" data-bs-target="#addCategoryModal">Add Category</button>
+            <table class="table table-striped table-bordered">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Category Name</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for c in categories %}
+                <tr>
+                    <td>{{ c.category_id }}</td>
+                    <td>{{ c.category_name }}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editCategoryModal" data-categoryid="{{ c.category_id }}">Edit</button>
+                        <button class="btn btn-sm btn-danger" data-categoryid="{{ c.category_id }}">Delete</button>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Transaction Details Table -->
+        <div class="tab-pane fade" id="transaction-details">
+            <table class="table table-striped table-bordered">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Transaction ID</th>
+                    <th>Product ID</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                    <th>Subtotal</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for d in transaction_details %}
+                <tr>
+                    <td>{{ d.detail_id }}</td>
+                    <td>{{ d.transaction_id }}</td>
+                    <td>{{ d.product_id }}</td>
+                    <td>{{ d.quantity }}</td>
+                    <td>{{ d.price }}</td>
+                    <td>{{ d.subtotal }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Payments Table -->
+        <div class="tab-pane fade" id="payments">
+            <table class="table table-striped table-bordered">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Transaction ID</th>
+                    <th>Method</th>
+                    <th>Amount</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for p in payments %}
+                <tr>
+                    <td>{{ p.payment_id }}</td>
+                    <td>{{ p.transaction_id }}</td>
+                    <td>{{ p.method }}</td>
+                    <td>{{ p.amount }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- User Modals -->
+<div class="modal fade" id="addUserModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="/admin/users/add">
+      <div class="modal-header">
+        <h5 class="modal-title">Add User</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input name="username" class="form-control mb-2" placeholder="Username" required>
+        <input name="password" type="password" class="form-control mb-2" placeholder="Password" required>
+        <select name="role" class="form-control mb-2" required>
+          <option value="">Select Role</option>
+          <option value="admin">Admin</option>
+          <option value="cashier">Cashier</option>
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">Add</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="modal fade" id="editUserModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="/admin/users/edit">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit User</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" name="user_id" id="editUserId">
+        <input name="username" id="editUsername" class="form-control mb-2" placeholder="Username" required>
+        <input name="password" type="password" class="form-control mb-2" placeholder="New Password (leave blank to keep)">
+        <select name="role" id="editUserRole" class="form-control mb-2" required>
+          <option value="admin">Admin</option>
+          <option value="cashier">Cashier</option>
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Product Modals -->
+<div class="modal fade" id="addProductModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="/admin/products/add">
+      <div class="modal-header">
+        <h5 class="modal-title">Add Product</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input name="product_name" class="form-control mb-2" placeholder="Product Name" required>
+        <select name="category_id" class="form-control mb-2" required>
+          <option value="">Select Category</option>
+          {% for c in categories %}
+          <option value="{{ c.category_id }}">{{ c.category_name }}</option>
+          {% endfor %}
+        </select>
+        <input name="price" type="number" step="0.01" class="form-control mb-2" placeholder="Price" required>
+        <input name="stock_quantity" type="number" class="form-control mb-2" placeholder="Stock Quantity" required>
+        <input name="unit" class="form-control mb-2" placeholder="Unit" required>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">Add</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="modal fade" id="editProductModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="/admin/products/edit">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Product</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" name="product_id" id="editProductId">
+        <input name="product_name" id="editProductName" class="form-control mb-2" placeholder="Product Name" required>
+        <select name="category_id" id="editProductCategory" class="form-control mb-2" required>
+          <option value="">Select Category</option>
+          {% for c in categories %}
+          <option value="{{ c.category_id }}">{{ c.category_name }}</option>
+          {% endfor %}
+        </select>
+        <input name="price" id="editProductPrice" type="number" step="0.01" class="form-control mb-2" placeholder="Price" required>
+        <input name="stock_quantity" id="editProductStock" type="number" class="form-control mb-2" placeholder="Stock Quantity" required>
+        <input name="unit" id="editProductUnit" class="form-control mb-2" placeholder="Unit" required>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Category Modals -->
+<div class="modal fade" id="addCategoryModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="/admin/categories/add">
+      <div class="modal-header">
+        <h5 class="modal-title">Add Category</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input name="category_name" class="form-control mb-2" placeholder="Category Name" required>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">Add</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="modal fade" id="editCategoryModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="/admin/categories/edit">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Category</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" name="category_id" id="editCategoryId">
+        <input name="category_name" id="editCategoryName" class="form-control mb-2" placeholder="Category Name" required>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Inventory Log Edit Modal -->
+<div class="modal fade" id="editInventoryLogModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="/admin/inventory/edit">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Inventory Log</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" name="log_id" id="editLogId">
+        <select name="product_id" id="editLogProductId" class="form-control mb-2" required>
+          <option value="">Select Product</option>
+          {% for p in products %}
+          <option value="{{ p.product_id }}">{{ p.product_name }}</option>
+          {% endfor %}
+        </select>
+        <select name="change_type" id="editLogChangeType" class="form-control mb-2" required>
+          <option value="stock_in">Stock In</option>
+          <option value="stock_out">Stock Out</option>
+          <option value="adjustment">Adjustment</option>
+        </select>
+        <input name="quantity_change" id="editLogQuantityChange" type="number" class="form-control mb-2" placeholder="Quantity Change" required>
+        <input name="remarks" id="editLogRemarks" class="form-control mb-2" placeholder="Remarks">
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// Example JS for populating edit modals (you'll need to implement data fetching)
+document.addEventListener('DOMContentLoaded', function() {
+    // User edit
+    document.querySelectorAll('[data-bs-target="#editUserModal"]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const userId = this.getAttribute('data-userid');
+            // Fetch user data via AJAX or set values directly if available
+            // Example:
+            // document.getElementById('editUserId').value = userId;
+            // document.getElementById('editUsername').value = ...;
+            // document.getElementById('editUserRole').value = ...;
+        });
+    });
+    // Product edit
+    document.querySelectorAll('[data-bs-target="#editProductModal"]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const productId = this.getAttribute('data-productid');
+            // Fetch product data and populate modal fields
+        });
+    });
+    // Category edit
+    document.querySelectorAll('[data-bs-target="#editCategoryModal"]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const categoryId = this.getAttribute('data-categoryid');
+            // Fetch category data and populate modal fields
+        });
+    });
+    // Inventory log edit
+    document.querySelectorAll('[data-bs-target="#editInventoryLogModal"]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.getElementById('editLogId').value = this.getAttribute('data-logid');
+            document.getElementById('editLogProductId').value = this.getAttribute('data-productid');
+            document.getElementById('editLogChangeType').value = this.getAttribute('data-changetype');
+            document.getElementById('editLogQuantityChange').value = this.getAttribute('data-quantitychange');
+            document.getElementById('editLogRemarks').value = this.getAttribute('data-remarks');
+        });
+    });
+    // Delete buttons: add confirmation and AJAX or form submission as needed
+
+    // --- Process Order Modal Logic ---
+    function recalculateOrderTotal() {
+        let total = 0;
+        document.querySelectorAll('#orderItems .order-item').forEach(function(item) {
+            const qty = parseFloat(item.querySelector('.quantity-input').value) || 0;
+            const price = parseFloat(item.querySelector('.price-input').value) || 0;
+            total += qty * price;
+        });
+        document.getElementById('orderTotalAmount').value = total.toFixed(2);
+    }
+
+    // Add new order item row
+    document.getElementById('addOrderItem').addEventListener('click', function() {
+        const orderItems = document.getElementById('orderItems');
+        const firstItem = orderItems.querySelector('.order-item');
+        const newItem = firstItem.cloneNode(true);
+        newItem.querySelector('.product-select').value = '';
+        newItem.querySelector('.quantity-input').value = 1;
+        newItem.querySelector('.price-input').value = '';
+        orderItems.appendChild(newItem);
+    });
+
+    // Remove order item row
+    document.getElementById('orderItems').addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-item')) {
+            const items = document.querySelectorAll('#orderItems .order-item');
+            if (items.length > 1) {
+                e.target.closest('.order-item').remove();
+                recalculateOrderTotal();
+            }
+        }
+    });
+
+    // Update price when product changes
+    document.getElementById('orderItems').addEventListener('change', function(e) {
+        if (e.target.classList.contains('product-select')) {
+            const price = e.target.selectedOptions[0].getAttribute('data-price');
+            e.target.closest('.order-item').querySelector('.price-input').value = price || '';
+            recalculateOrderTotal();
+        }
+        if (e.target.classList.contains('quantity-input') || e.target.classList.contains('price-input')) {
+            recalculateOrderTotal();
+        }
+    });
+
+    // Also recalculate on input
+    document.getElementById('orderItems').addEventListener('input', function(e) {
+        if (e.target.classList.contains('quantity-input') || e.target.classList.contains('price-input')) {
+            recalculateOrderTotal();
+        }
+    });
+
+    // Submit order
+    document.getElementById('processOrderForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const user_id = this.user_id.value;
+        const payment_method = this.payment_method.value;
+        const total_amount = parseFloat(this.total_amount.value);
+        const items = [];
+        let valid = true;
+        document.querySelectorAll('#orderItems .order-item').forEach(function(item) {
+            const product_id = item.querySelector('.product-select').value;
+            const quantity = parseInt(item.querySelector('.quantity-input').value);
+            const price = parseFloat(item.querySelector('.price-input').value);
+            if (!product_id || !quantity || !price) valid = false;
+            items.push({product_id: parseInt(product_id), quantity, price});
+        });
+        if (!valid || items.length === 0) {
+            document.getElementById('orderError').textContent = "Please fill all item fields.";
+            return;
+        }
+        fetch('/transactions', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({user_id: parseInt(user_id), payment_method, total_amount, items})
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) {
+                document.getElementById('orderError').textContent = data.error;
+                document.getElementById('orderSuccess').textContent = '';
+            } else {
+                document.getElementById('orderError').textContent = '';
+                document.getElementById('orderSuccess').textContent = data.message;
+                setTimeout(() => { location.reload(); }, 1000);
+            }
+        })
+        .catch(() => {
+            document.getElementById('orderError').textContent = "Order failed. Please try again.";
+            document.getElementById('orderSuccess').textContent = '';
+        });
+    });
+});
+</script>
+</body>
+</html>
