@@ -116,6 +116,16 @@ def initialize_routes(app):
         )
         db.session.add(product)
         db.session.commit()
+        # Add inventory log for initial stock
+        if product.stock_quantity > 0:
+            log = InventoryLog(
+                product_id=product.product_id,
+                change_type='Initial Stock',
+                quantity_change=product.stock_quantity,
+                remarks='Product created with initial stock'
+            )
+            db.session.add(log)
+            db.session.commit()
         return jsonify({'message': 'Product created'})
 
     @app.route('/products', methods=['GET'])
@@ -150,6 +160,16 @@ def initialize_routes(app):
         )
         db.session.add(product)
         db.session.commit()
+        # Add inventory log for initial stock
+        if int(stock_quantity) > 0:
+            log = InventoryLog(
+                product_id=product.product_id,
+                change_type='Initial Stock',
+                quantity_change=int(stock_quantity),
+                remarks='Product created with initial stock'
+            )
+            db.session.add(log)
+            db.session.commit()
         return redirect(url_for('admin_dashboard'))
 
     @app.route('/admin/products/edit', methods=['POST'])
@@ -210,6 +230,14 @@ def initialize_routes(app):
                 if product.stock_quantity < item['quantity']:
                     return jsonify({'error': f"Not enough stock for product {product.product_name}"}), 400
                 product.stock_quantity -= item['quantity']
+                # Add inventory log for deduction
+                log = InventoryLog(
+                    product_id=product.product_id,
+                    change_type='Sale',
+                    quantity_change=-item['quantity'],
+                    remarks=f'Sold {item["quantity"]} during transaction {transaction.transaction_id}'
+                )
+                db.session.add(log)
             db.session.commit()
 
             payment = Payment(
