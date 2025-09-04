@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask_migrate import Migrate
 from models import db, Product, InventoryLog
 from config import Config
@@ -17,7 +17,8 @@ initialize_routes(app)
 def index():
     return "POS System API Running ✅"
 
-@app.route('/admin/products/add', methods=['POST'])
+
+@app.route('/add_product', methods=['POST'])
 def add_product():
     # Get form data
     product_name = request.form['product_name']
@@ -50,7 +51,7 @@ def add_product():
         db.session.commit()
         print(f"Inventory log added: {log.log_id}")
 
-    return "Product added successfully!"
+    return jsonify({"message": "Product added successfully!"})
 
 if __name__ == '__main__':
     app.run(debug=True)

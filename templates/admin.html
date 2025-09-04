@@ -189,8 +189,16 @@
                     <td>{{ user.role }}</td>
                     <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
                     <td>
-                        <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editUserModal" data-userid="{{ user.user_id }}">Edit</button>
-                        <button class="btn btn-sm btn-danger" data-userid="{{ user.user_id }}">Delete</button>
+                        <button class="btn btn-sm btn-warning"
+                            data-bs-toggle="modal"
+                            data-bs-target="#editUserModal"
+                            data-userid="{{ user.user_id }}"
+                            data-username="{{ user.username }}"
+                            data-role="{{ user.role }}"
+                        >Edit</button>
+                        <form method="post" action="/admin/users/delete/{{ user.user_id }}" style="display:inline;">
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this user?')">Delete</button>
+                        </form>
                     </td>
                 </tr>
                 {% endfor %}
@@ -225,8 +233,19 @@
                     <td>{{ product.unit }}</td>
                     <td>{{ product.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
                     <td>
-                        <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editProductModal" data-productid="{{ product.product_id }}">Edit</button>
-                        <button class="btn btn-sm btn-danger" data-productid="{{ product.product_id }}">Delete</button>
+                        <button class="btn btn-sm btn-warning"
+                            data-bs-toggle="modal"
+                            data-bs-target="#editProductModal"
+                            data-productid="{{ product.product_id }}"
+                            data-productname="{{ product.product_name }}"
+                            data-categoryid="{{ product.category_id }}"
+                            data-price="{{ product.price }}"
+                            data-stock="{{ product.stock_quantity }}"
+                            data-unit="{{ product.unit }}"
+                        >Edit</button>
+                        <form method="post" action="/admin/products/delete/{{ product.product_id }}" style="display:inline;">
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this product?')">Delete</button>
+                        </form>
                     </td>
                 </tr>
                 {% endfor %}
@@ -319,8 +338,15 @@
                     <td>{{ c.category_id }}</td>
                     <td>{{ c.category_name }}</td>
                     <td>
-                        <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editCategoryModal" data-categoryid="{{ c.category_id }}">Edit</button>
-                        <button class="btn btn-sm btn-danger" data-categoryid="{{ c.category_id }}">Delete</button>
+                        <button class="btn btn-sm btn-warning"
+                            data-bs-toggle="modal"
+                            data-bs-target="#editCategoryModal"
+                            data-categoryid="{{ c.category_id }}"
+                            data-categoryname="{{ c.category_name }}"
+                        >Edit</button>
+                        <form method="post" action="/admin/categories/delete/{{ c.category_id }}" style="display:inline;">
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this category?')">Delete</button>
+                        </form>
                     </td>
                 </tr>
                 {% endfor %}
@@ -555,26 +581,27 @@ document.addEventListener('DOMContentLoaded', function() {
     // User edit
     document.querySelectorAll('[data-bs-target="#editUserModal"]').forEach(btn => {
         btn.addEventListener('click', function() {
-            const userId = this.getAttribute('data-userid');
-            // Fetch user data via AJAX or set values directly if available
-            // Example:
-            // document.getElementById('editUserId').value = userId;
-            // document.getElementById('editUsername').value = ...;
-            // document.getElementById('editUserRole').value = ...;
+            document.getElementById('editUserId').value = this.getAttribute('data-userid');
+            document.getElementById('editUsername').value = this.getAttribute('data-username');
+            document.getElementById('editUserRole').value = this.getAttribute('data-role');
         });
     });
     // Product edit
     document.querySelectorAll('[data-bs-target="#editProductModal"]').forEach(btn => {
         btn.addEventListener('click', function() {
-            const productId = this.getAttribute('data-productid');
-            // Fetch product data and populate modal fields
+            document.getElementById('editProductId').value = this.getAttribute('data-productid');
+            document.getElementById('editProductName').value = this.getAttribute('data-productname');
+            document.getElementById('editProductCategory').value = this.getAttribute('data-categoryid');
+            document.getElementById('editProductPrice').value = this.getAttribute('data-price');
+            document.getElementById('editProductStock').value = this.getAttribute('data-stock');
+            document.getElementById('editProductUnit').value = this.getAttribute('data-unit');
         });
     });
     // Category edit
     document.querySelectorAll('[data-bs-target="#editCategoryModal"]').forEach(btn => {
         btn.addEventListener('click', function() {
-            const categoryId = this.getAttribute('data-categoryid');
-            // Fetch category data and populate modal fields
+            document.getElementById('editCategoryId').value = this.getAttribute('data-categoryid');
+            document.getElementById('editCategoryName').value = this.getAttribute('data-categoryname');
         });
     });
     // Inventory log edit

@@ -425,9 +425,13 @@ def initialize_routes(app):
             password = request.form['password']
             user = User.query.filter_by(username=username).first()
             if user and check_password_hash(user.password, password):
-                if user.role != 'admin':
-                    return "Not authorized", 403
                 session['user_id'] = user.user_id
+                session['role'] = user.role  # Optionally store role in session
                 return redirect(url_for('admin_dashboard'))
             return "Invalid credentials", 401
         return render_template('login.html')
+
+    @app.route('/logout')
+    def logout():
+        session.clear()
+        return redirect(url_for('login'))
