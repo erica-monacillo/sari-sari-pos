@@ -34,8 +34,10 @@ class Transaction(db.Model):
     payment_method = db.Column(db.String(50))
     total_amount = db.Column(db.Float)
     date_time = db.Column(db.DateTime, default=datetime.utcnow)
+    user = db.relationship('User', backref='transactions')   # Link to User
     details = db.relationship('TransactionDetail', backref='transaction', lazy=True)
     payments = db.relationship('Payment', backref='transaction', lazy=True)
+    
 
 # Transaction details (line items)
 class TransactionDetail(db.Model):

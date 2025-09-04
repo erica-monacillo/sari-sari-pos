@@ -256,6 +256,8 @@ def initialize_routes(app):
     @app.route('/transactions', methods=['GET'])
     def get_transactions():
         transactions = Transaction.query.all()
+        users = User.query.filter(User.role.in_(["admin", "cashier"])).all() # added
+
         result = []
         for t in transactions:
             items = []
