@@ -122,7 +122,8 @@ def initialize_routes(app):
                 product_id=product.product_id,
                 change_type='Initial Stock',
                 quantity_change=product.stock_quantity,
-                remarks='Product created with initial stock'
+                remarks='Product created with initial stock',
+                current_stock=product.stock_quantity
             )
             db.session.add(log)
             db.session.commit()
@@ -166,7 +167,8 @@ def initialize_routes(app):
                 product_id=product.product_id,
                 change_type='Initial Stock',
                 quantity_change=int(stock_quantity),
-                remarks='Product created with initial stock'
+                remarks='Product created with initial stock',
+                current_stock=product.stock_quantity
             )
             db.session.add(log)
             db.session.commit()
@@ -235,7 +237,8 @@ def initialize_routes(app):
                     product_id=product.product_id,
                     change_type='Sale',
                     quantity_change=-item['quantity'],
-                    remarks=f'Sold {item["quantity"]} during transaction {transaction.transaction_id}'
+                    remarks=f'Sold {item["quantity"]} during transaction {transaction.transaction_id}',
+                    current_stock=product.stock_quantity
                 )
                 db.session.add(log)
             db.session.commit()
@@ -282,16 +285,27 @@ def initialize_routes(app):
     @app.route('/inventory', methods=['POST'])
     def add_inventory_log():
         data = request.get_json()
+
+        # Find product first
+        product = Product.query.get(data['product_id'])
+        if not product:
+            return jsonify({'error': 'Product not found'}), 404
+
+        # Update product's stock
+        product.stock_quantity = (product.stock_quantity or 0) + data['quantity_change']
+
+        # Create log entry
         log = InventoryLog(
             product_id=data['product_id'],
             change_type=data['change_type'],
             quantity_change=data['quantity_change'],
-            remarks=data.get('remarks', '')
+            remarks=data.get('remarks', ''),
+            current_stock=product.stock_quantity  # snapshot after update
         )
+
         db.session.add(log)
-        product = Product.query.get(data['product_id'])
-        product.stock_quantity += data['quantity_change']
         db.session.commit()
+
         return jsonify({'message': 'Inventory log added'})
 
     @app.route('/inventory', methods=['GET'])
@@ -306,7 +320,8 @@ def initialize_routes(app):
                 'change_type': l.change_type,
                 'quantity_change': l.quantity_change,
                 'remarks': l.remarks,
-                'date_time': l.date_time
+                'date_time': l.date_time,
+                'current_stock': l.current_stock 
             })
         return jsonify(result)
 

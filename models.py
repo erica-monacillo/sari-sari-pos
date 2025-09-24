@@ -61,6 +61,8 @@ class InventoryLog(db.Model):
     product_id = db.Column(db.Integer, db.ForeignKey('product.product_id'))
     change_type = db.Column(db.String(50))  # stock_in, stock_out, adjustment
     quantity_change = db.Column(db.Integer)
+    current_stock = db.Column(db.Integer, default=0)
     remarks = db.Column(db.String(200))
     date_time = db.Column(db.DateTime, default=datetime.utcnow)
     product = db.relationship('Product', backref='inventory_logs')
+    

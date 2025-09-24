@@ -45,8 +45,9 @@ def add_product():
             product_id=new_product.product_id,
             change_type='stock_in',
             quantity_change=stock_quantity,
-            remarks='Initial stock on product creation'
-        )
+            remarks='Initial stock on product creation',
+            current_stock=product.stock_quantity
+    )
         db.session.add(log)
         db.session.commit()
         print(f"Inventory log added: {log.log_id}")

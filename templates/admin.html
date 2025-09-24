@@ -291,6 +291,7 @@
                     <th>Product</th>
                     <th>Change Type</th>
                     <th>Quantity Change</th>
+                    <th>Current Stock</th>
                     <th>Remarks</th>
                     <th>Date</th>
                 </tr>
@@ -302,6 +303,7 @@
                     <td>{{ log.product.product_name if log.product else 'N/A' }}</td>
                     <td>{{ log.change_type }}</td>
                     <td>{{ log.quantity_change }}</td>
+                    <td>{{ log.current_stock }}</td>
                     <td>{{ log.remarks }}</td>
                     <td>{{ log.date_time.strftime('%Y-%m-%d %H:%M:%S') }}</td>
                     <td>
